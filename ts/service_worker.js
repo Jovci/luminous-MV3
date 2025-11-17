@@ -32,6 +32,7 @@ function buildRedirectSessionRules(baseAddress) {
 
   /**
    * Matches: https://usher.ttvnw.net/api/channel/hls/<id>.m3u8[?<query>]
+   *          https://usher.ttvnw.net/api/v2/channel/hls/<id>.m3u8[?<query>]
    * Redirects: <base>/live/<id>[?<query>]
    */
   const liveRule = {
@@ -45,7 +46,7 @@ function buildRedirectSessionRules(baseAddress) {
     },
     condition: {
       regexFilter:
-        "^https://usher\\.ttvnw\\.net/api/channel/hls/([^/?]+)\\.m3u8(\\?.*)?$",
+        "^https://usher\\.ttvnw\\.net/api/v?2?/channel/hls/([^/?]+)\\.m3u8(\\?.*)?$",
       resourceTypes: ["xmlhttprequest", "media", "other"],
     },
   };
@@ -107,7 +108,7 @@ async function setAllowBypassRules(enabled) {
     action: { type: "allow" },
     condition: {
       regexFilter:
-        "^https://usher\\.ttvnw\\.net/api/channel/hls/([^/?]+)\\.m3u8(\\?.*)?$",
+        "^https://usher\\.ttvnw\\.net/api/v?2?/channel/hls/([^/?]+)\\.m3u8(\\?.*)?$",
       resourceTypes: ["xmlhttprequest", "media", "other"],
     },
   };
