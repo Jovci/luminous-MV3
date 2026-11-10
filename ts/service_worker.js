@@ -173,8 +173,6 @@ async function applyRulesFromStorage() {
       "address",
     ]);
     await addOrUpdateAdsBlockDynamicRule();
-    // Always clear session redirects first to avoid stale redirects after restart
-    await removeRedirectSessionRules();
     // Apply redirects only if relay is online
     const online = await isRelayOnline(address);
     await applyOnlineState(online, address);
@@ -224,7 +222,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
     const next = changes.address.newValue || DEFAULT_ADDRESS;
     // Re-evaluate based on new address health
     isRelayOnline(next).then(async (online) => {
-      await removeRedirectSessionRules();
       await applyOnlineState(online, next);
     });
   }
@@ -235,7 +232,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
     const { address = DEFAULT_ADDRESS } = await chrome.storage.sync.get(["address"]);
     const online = await isRelayOnline(address);
-    await removeRedirectSessionRules();
     await applyOnlineState(online, address);
   } catch (e) {
     // ignore
@@ -249,7 +245,6 @@ async function refreshRulesNow(context) {
   try {
     const { address = DEFAULT_ADDRESS } = await chrome.storage.sync.get(["address"]);
     const online = await isRelayOnline(address);
-    await removeRedirectSessionRules();
     await applyOnlineState(online, address, context);
   } catch (_) {}
 }
@@ -280,9 +275,12 @@ if (chrome.webNavigation && chrome.webNavigation.onHistoryStateUpdated) {
 
 async function applyOnlineState(online, address, context) {
   if (online) {
-    await setAllowBypassRules(false);
+    // Replace redirects atomically (remove+add in one call) before dropping the
+    // allow rules, so a Twitch usher request never lands in a gap with no redirect.
     await addRedirectSessionRules(address);
+    await setAllowBypassRules(false);
   } else {
+    await removeRedirectSessionRules();
     await setAllowBypassRules(true);
     // Notify user if transitioning to offline (or unknown->offline)
     if (lastRelayOnline !== false) {
